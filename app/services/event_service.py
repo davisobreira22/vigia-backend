@@ -2,6 +2,7 @@ import cv2
 import os
 import json
 import time
+import threading
 from datetime import datetime
 
 from config import EVENTS_DIR, SAVE_COOLDOWN_SECONDS
@@ -10,6 +11,7 @@ from app.database.event_repository import insert_evento
 os.makedirs(EVENTS_DIR, exist_ok=True)
 
 _last_save_time = 0
+_file_lock = threading.Lock()
 
 
 def save_event(frame, conf: float, pessoas: int, timestamp: float):
@@ -25,29 +27,41 @@ def save_event(frame, conf: float, pessoas: int, timestamp: float):
 
     _last_save_time = now
 
-    # Salva imagem em disco
-    ts_str = datetime.fromtimestamp(timestamp).strftime("%Y%m%d_%H%M%S")
+    # Formatação de datas
+    ts_dt = datetime.fromtimestamp(timestamp)
+    ts_str = ts_dt.strftime("%Y%m%d_%H%M%S")
+    datetime_str = ts_dt.strftime("%d/%m/%Y %H:%M:%S")
+
     base_name = f"evento_{ts_str}"
-    img_path = os.path.join(EVENTS_DIR, f"{base_name}.jpg")
-    cv2.imwrite(img_path, frame)
+    img_filename = f"{base_name}.jpg"
+    img_path = os.path.join(EVENTS_DIR, img_filename)
 
-    datetime_str = datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %H:%M:%S")
+    # 1. Salva a imagem em disco
+    try:
+        cv2.imwrite(img_path, frame)
+    except Exception as e:
+        print(f"❌ Erro ao salvar imagem no disco: {e}")
+        return
 
-    # Persiste no banco de dados
-    insert_evento(
-        timestamp=timestamp,
-        datetime_str=datetime_str,
-        confianca=conf,
-        pessoas=pessoas,
-        imagem=f"{base_name}.jpg"
-    )
+    # 2. Persiste no banco de dados SQLite
+    try:
+        insert_evento(
+            timestamp=timestamp,
+            datetime_str=datetime_str,
+            confianca=conf,
+            pessoas=pessoas,
+            imagem=img_filename
+        )
+    except Exception as e:
+        print(f"❌ Erro ao salvar evento no SQLite: {e}")
 
-    # Mantém compatibilidade: atualiza index.json local também
-    _update_index_json(timestamp, datetime_str, conf, pessoas, base_name)
+    # 3. Mantém compatibilidade com index.json com Lock de Thread
+    with _file_lock:
+        _update_index_json(timestamp, datetime_str, conf, pessoas, img_filename)
 
 
-def _update_index_json(timestamp, datetime_str, conf, pessoas, base_name):
-    """Mantém o index.json local para compatibilidade com o frontend atual."""
+def _update_index_json(timestamp, datetime_str, conf, pessoas, img_filename):
+    """Atualiza o arquivo index.json local garantindo concorrência segura."""
     index_path = os.path.join(EVENTS_DIR, "index.json")
     existing = []
 
@@ -63,8 +77,11 @@ def _update_index_json(timestamp, datetime_str, conf, pessoas, base_name):
         "datetime": datetime_str,
         "confianca": round(conf * 100, 2),
         "pessoas": pessoas,
-        "imagem": f"{base_name}.jpg"
+        "imagem": img_filename
     })
 
-    with open(index_path, "w", encoding="utf-8") as f:
-        json.dump(existing, f, ensure_ascii=False, indent=2)
+    try:
+        with open(index_path, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"❌ Erro ao atualizar index.json: {e}")

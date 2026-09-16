@@ -20,9 +20,9 @@ def start_inference(frame_queue: Queue, broadcast_fn, model_path: str):
     """
     Pipeline principal de inferência.
     1. Lê frames da fila
-    2. Roda YOLO para contar pessoas (leve)
-    3. Se >= MIN_PESSOAS_VIOLENCIA, roda R3D-18 (pesado)
-    4. Faz broadcast do frame + metadados para o WebSocket
+    2. Roda YOLO para contar pessoas
+    3. Se >= MIN_PESSOAS_VIOLENCIA, roda R3D-18
+    4. Faz broadcast do frame + metadados padronizados para o WebSocket
     Roda em thread dedicada.
     """
     violence_model = ViolenceDetector(model_path, device=DEVICE)
@@ -40,37 +40,55 @@ def start_inference(frame_queue: Queue, broadcast_fn, model_path: str):
         buffer.append(frame)
         timestamp = time.time()
 
-        # --- Etapa 1: YOLO (sempre roda) ---
+        # --- Etapa 1: YOLO (Detecção de Pessoas) ---
         results = yolo_model(frame, classes=[0], verbose=False)
         pessoas = int(len(results[0].boxes)) if results[0].boxes is not None else 0
 
         violencia = False
         conf = 0.0
 
-        # --- Etapa 2: R3D-18 (só roda com 2+ pessoas e buffer cheio) ---
+        # --- Etapa 2: R3D-18 (Inferência de Violência) ---
         if pessoas >= MIN_PESSOAS_VIOLENCIA and len(buffer) == BUFFER_SIZE:
             tensor = _build_tensor(buffer)
-            pred, conf = violence_model.predict(tensor, threshold=VIOLENCE_THRESHOLD)
+            
+            # Desativa o cálculo de gradientes para economizar GPU/RAM
+            with torch.no_grad():
+                pred, conf = violence_model.predict(tensor, threshold=VIOLENCE_THRESHOLD)
+            
             violencia = bool(pred == 1)
 
             if violencia:
+                # Dispara gravação do evento sem bloquear a inferência
                 threading.Thread(
-                    target=save_event,
-                    args=(frame.copy(), conf, pessoas, timestamp),
+                    target=_safe_save_event,
+                    args=(frame.copy(), float(conf), pessoas, timestamp),
                     daemon=True
                 ).start()
 
-        # --- Etapa 3: Broadcast para o frontend ---
+        # --- Etapa 3: Codificação do Frame ---
         _, buffer_img = cv2.imencode('.jpg', frame)
         frame_b64 = base64.b64encode(buffer_img).decode('utf-8')
 
+        # Calculo de latência em milissegundos
+        latencia_ms = int((time.time() - timestamp) * 1000)
+
+        # --- Etapa 4: Broadcast padronizado ---
         broadcast_fn({
             "timestamp": timestamp,
-            "pessoas": pessoas,
+            "pessoasCount": pessoas,
             "violencia": violencia,
-            "confianca": float(conf),
+            "iaScore": float(conf),
+            "latenciaMs": latencia_ms,
             "frame": frame_b64
         })
+
+
+def _safe_save_event(frame, conf, pessoas, timestamp):
+    """Encapsula a gravação do evento para capturar exceções sem quebrar a thread."""
+    try:
+        save_event(frame, conf, pessoas, timestamp)
+    except Exception as e:
+        print(f"⚠️ Erro ao salvar evento de violência: {e}")
 
 
 def _build_tensor(buffer: deque) -> torch.Tensor:

@@ -1,0 +1,79 @@
+[
+  {
+    "timestamp": 1789508674.1005332,
+    "datetime": "15/09/2026 18:44:34",
+    "confianca": 87.16,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184434.jpg"
+  },
+  {
+    "timestamp": 1789508684.4997296,
+    "datetime": "15/09/2026 18:44:44",
+    "confianca": 88.67,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184444.jpg"
+  },
+  {
+    "timestamp": 1789508694.5954647,
+    "datetime": "15/09/2026 18:44:54",
+    "confianca": 85.21,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184454.jpg"
+  },
+  {
+    "timestamp": 1789508704.5955687,
+    "datetime": "15/09/2026 18:45:04",
+    "confianca": 87.35,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184504.jpg"
+  },
+  {
+    "timestamp": 1789508719.3640928,
+    "datetime": "15/09/2026 18:45:19",
+    "confianca": 87.21,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184519.jpg"
+  },
+  {
+    "timestamp": 1789508851.443122,
+    "datetime": "15/09/2026 18:47:31",
+    "confianca": 88.77,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184731.jpg"
+  },
+  {
+    "timestamp": 1789508864.1780012,
+    "datetime": "15/09/2026 18:47:44",
+    "confianca": 85.64,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184744.jpg"
+  },
+  {
+    "timestamp": 1789508874.3239222,
+    "datetime": "15/09/2026 18:47:54",
+    "confianca": 91.41,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184754.jpg"
+  },
+  {
+    "timestamp": 1789508885.3802857,
+    "datetime": "15/09/2026 18:48:05",
+    "confianca": 91.02,
+    "pessoas": 2,
+    "imagem": "evento_20260915_184805.jpg"
+  },
+  {
+    "timestamp": 1789513439.8768687,
+    "datetime": "15/09/2026 20:03:59",
+    "confianca": 85.4,
+    "pessoas": 2,
+    "imagem": "evento_20260915_200359.jpg"
+  },
+  {
+    "timestamp": 1789513453.412516,
+    "datetime": "15/09/2026 20:04:13",
+    "confianca": 86.18,
+    "pessoas": 2,
+    "imagem": "evento_20260915_200413.jpg"
+  }
+]
