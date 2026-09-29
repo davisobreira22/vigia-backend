@@ -1,0 +1,8 @@
+opencv-python==4.13.0.92
+numpy==2.4.4
+websockets==16.0
+ultralytics
+torch
+torchvision
+torchaudio
+# sqlite3 já vem nativo no Python — não precisa instalar
